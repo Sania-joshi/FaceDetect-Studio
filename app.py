@@ -47,6 +47,10 @@ def app(environ, start_response):
         relative_path = path.removeprefix("/frontend/")
         return _serve_file(start_response, FRONTEND_DIR / relative_path)
 
+    if path.startswith("/models/"):
+        relative_path = path.removeprefix("/models/")
+        return _serve_file(start_response, FRONTEND_DIR / "models" / relative_path)
+
     if path in {"/index.html", "/app.js", "/styles.css"}:
         return _serve_file(start_response, FRONTEND_DIR / path.lstrip("/"))
 

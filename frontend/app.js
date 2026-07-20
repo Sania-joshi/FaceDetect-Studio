@@ -12,6 +12,7 @@ const resultText = document.getElementById("resultText");
 const faceStatus = document.getElementById("faceStatus");
 const scanMode = document.getElementById("scanMode");
 const sourceLabel = document.getElementById("sourceLabel");
+const captureCanvas = document.getElementById("captureCanvas");
 
 const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
 
@@ -90,13 +91,42 @@ function prettyEmotion(name) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+function pickBestExpression(expressions) {
+  let bestExpression = "neutral";
+  let bestProbability = 0;
+
+  for (const [expression, probability] of Object.entries(expressions)) {
+    if (probability > bestProbability) {
+      bestExpression = expression;
+      bestProbability = probability;
+    }
+  }
+
+  return [bestExpression, bestProbability];
+}
+
+function prepareCanvasForImage(image) {
+  const maxSide = 512;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+
+  captureCanvas.width = width;
+  captureCanvas.height = height;
+  const context = captureCanvas.getContext("2d", { willReadFrequently: true });
+  context.clearRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  return captureCanvas;
+}
+
 async function analyzeVideoFrame() {
   if (!stream || video.hidden) {
     return;
   }
 
   const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.2 }))
     .withFaceExpressions();
 
   if (!detection) {
@@ -111,7 +141,7 @@ async function analyzeVideoFrame() {
     return;
   }
 
-  const [expression, probability] = getTopExpression(detection.expressions);
+  const [expression, probability] = pickBestExpression(detection.expressions);
   const confidence = probability * 100;
 
   setResult({
@@ -138,6 +168,16 @@ async function startCamera() {
     imagePreview.hidden = true;
     cameraStatus.textContent = "Camera live";
     updateControls(true);
+
+    await new Promise((resolve) => {
+      if (video.readyState >= 2) {
+        resolve();
+        return;
+      }
+
+      video.onloadeddata = () => resolve();
+    });
+
     setResult({
       emotion: "Camera active",
       confidence: 0,
@@ -168,7 +208,7 @@ async function startCamera() {
       emotion: "Camera unavailable",
       confidence: 0,
       message:
-        "The browser could not access the webcam. Use image upload or connect the app to a hosted inference service.",
+        "The browser could not access the webcam in this session. Use image upload to get an emotion result right away.",
       mode: "Fallback mode",
       source: "Browser UI",
       face: error?.message || "Permission denied",
@@ -188,9 +228,19 @@ function showUploadedImage(file) {
 
     loadModels()
       .then(async () => {
-        const image = await faceapi.bufferToImage(file);
+        const image = imagePreview;
+        await new Promise((resolve) => {
+          if (image.complete && image.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+
+          image.onload = () => resolve();
+        });
+
+        const detectionSource = prepareCanvasForImage(image);
         const detection = await faceapi
-          .detectSingleFace(image, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+          .detectSingleFace(detectionSource, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.2 }))
           .withFaceExpressions();
 
         if (!detection) {
@@ -205,7 +255,7 @@ function showUploadedImage(file) {
           return;
         }
 
-        const [expression, probability] = getTopExpression(detection.expressions);
+        const [expression, probability] = pickBestExpression(detection.expressions);
         const confidence = probability * 100;
 
         setResult({
@@ -216,6 +266,7 @@ function showUploadedImage(file) {
           source: file.name,
           face: `Face detected (${detection.detection.score.toFixed(2)})`,
         });
+        cameraStatus.textContent = "Image analyzed";
       })
       .catch((error) => {
         setResult({
@@ -226,6 +277,7 @@ function showUploadedImage(file) {
           source: file.name,
           face: "Model error",
         });
+        cameraStatus.textContent = "Image analysis failed";
       });
   };
 
