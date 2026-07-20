@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FaceDetect Studio</title>
+    <meta
+      name="description"
+      content="A polished emotion recognition frontend for FaceDetect with webcam and image upload support."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb bg-orb-one"></div>
+    <div class="bg-orb bg-orb-two"></div>
+
+    <main class="shell">
+      <section class="hero card glass">
+        <div class="hero-copy">
+          <span class="eyebrow">FaceDetect • Emotion Recognition</span>
+          <h1>Emotion analysis with a clean, deployment-ready interface.</h1>
+          <p>
+            Designed for webcam scanning, image upload, and a future prediction
+            API. This frontend is built for Vercel and gives the project a
+            professional product feel.
+          </p>
+
+          <div class="hero-actions">
+            <button id="startCameraBtn" class="button primary">Start camera</button>
+            <label class="button secondary" for="imageInput">Upload image</label>
+            <input id="imageInput" type="file" accept="image/*" hidden />
+          </div>
+
+          <div class="quick-stats">
+            <div class="mini-stat">
+              <strong>7</strong>
+              <span>emotion classes</span>
+            </div>
+            <div class="mini-stat">
+              <strong>48×48</strong>
+              <span>model input</span>
+            </div>
+            <div class="mini-stat">
+              <strong>Vercel</strong>
+              <span>frontend-ready</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="monitor">
+            <div class="monitor-bar">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+
+            <div class="stage">
+              <video id="video" autoplay playsinline muted></video>
+              <img id="imagePreview" alt="Uploaded preview" hidden />
+
+              <div class="frame frame-top-left"></div>
+              <div class="frame frame-top-right"></div>
+              <div class="frame frame-bottom-left"></div>
+              <div class="frame frame-bottom-right"></div>
+
+              <div class="status-pill" id="cameraStatus">Camera idle</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two-up">
+        <article class="card glass analysis-card">
+          <div class="card-header">
+            <div>
+              <span class="section-kicker">Live result</span>
+              <h2 id="emotionName">Awaiting scan</h2>
+            </div>
+            <span class="confidence-chip" id="confidenceLabel">0%</span>
+          </div>
+
+          <p id="resultText" class="result-text">
+            Start the camera or upload an image to prepare the interface for
+            prediction output.
+          </p>
+
+          <div class="progress-track">
+            <div id="confidenceBar" class="progress-fill" style="width: 0%"></div>
+          </div>
+
+          <div class="result-grid">
+            <div>
+              <span class="metric-label">Face status</span>
+              <strong id="faceStatus">No face analyzed</strong>
+            </div>
+            <div>
+              <span class="metric-label">Mode</span>
+              <strong id="scanMode">Frontend demo</strong>
+            </div>
+            <div>
+              <span class="metric-label">Confidence</span>
+              <strong id="confidenceValue">0.0%</strong>
+            </div>
+            <div>
+              <span class="metric-label">Source</span>
+              <strong id="sourceLabel">Browser UI</strong>
+            </div>
+          </div>
+
+          <div class="emotion-chips" aria-label="Detected emotion classes">
+            <span>Angry</span>
+            <span>Disgust</span>
+            <span>Fear</span>
+            <span>Happy</span>
+            <span>Sad</span>
+            <span>Surprise</span>
+            <span>Neutral</span>
+          </div>
+        </article>
+
+        <article class="card glass workflow-card">
+          <span class="section-kicker">Workflow</span>
+          <h2>How the app is structured</h2>
+
+          <ol class="steps">
+            <li>Capture a webcam frame or upload an image.</li>
+            <li>Send the image to a prediction service or browser model.</li>
+            <li>Render the predicted emotion and confidence.</li>
+            <li>Keep the UI responsive for Vercel deployment.</li>
+          </ol>
+
+          <div class="note-box">
+            The current Python scripts stay useful for local training and
+            validation, while this frontend becomes the presentation layer.
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <canvas id="captureCanvas" hidden></canvas>
+    <script src="app.js"></script>
+  </body>
+</html>

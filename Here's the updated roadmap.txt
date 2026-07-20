@@ -1,0 +1,83 @@
+Here's the updated roadmap:
+
+Phase 1: Project Setup
+────────────────────────
+Step 1 → Set Up VS Code & Python Environment
+Step 2 → Create Project Structure
+Step 3 → Install Required Libraries
+
+Phase 2: Build the AI Model
+────────────────────────────
+Step 4 → Download the FER-2013 Dataset
+Step 5 → Understand the Dataset
+Step 6 → Preprocess the Images
+Step 7 → Build the CNN Model
+Step 8 → Train the Model
+Step 9 → Save the Trained Model (.h5 or .keras)
+
+Phase 3: Live Emotion Detection
+────────────────────────────────
+Step 10 → Access the Webcam with OpenCV
+Step 11 → Detect Faces in Each Video Frame
+Step 12 → Preprocess the Detected Face
+Step 13 → Load the Trained Model
+Step 14 → Predict the Emotion in Real Time
+Step 15 → Display the Emotion and Confidence on the Live Video
+
+Phase 4: Improvements (Optional)
+─────────────────────────────────
+Step 16 → Improve Accuracy
+Step 17 → Detect Multiple Faces
+Step 18 → Add Voice Feedback
+Step 19 → Create a GUI (Streamlit/Tkinter)
+Step 20 → Deploy the Project
+
+
+***********************--------------****************
+
+How the live system will work
+Laptop Webcam
+      │
+      ▼
+Capture Live Video (30 FPS)
+      │
+      ▼
+Read One Frame
+      │
+      ▼
+Detect Face (OpenCV Haar Cascade or DNN)
+      │
+      ▼
+Crop the Face
+      │
+      ▼
+Resize to 48 × 48
+      │
+      ▼
+Convert to Grayscale
+      │
+      ▼
+CNN Model Predicts Emotion
+      │
+      ▼
+Emotion: Happy 😊 (96%)
+      │
+      ▼
+Draw a Rectangle Around the Face
+      │
+      ▼
+Show the Result on the Live Video
+
+For example, if you're in front of the camera:
+
++----------------------------------------+
+|                                        |
+|      ┌──────────────┐             |
+|      │    😀        │                 |
+|      │              │                 |
+|      └──────────────┘             |
+|                                        |
+| Emotion : Happy                        |
+| Confidence : 95.8%                     |
+|                                        |
++----------------------------------------+
