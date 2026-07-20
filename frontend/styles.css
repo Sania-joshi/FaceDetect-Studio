@@ -175,6 +175,18 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.danger {
+  color: #ffd9df;
+  background: rgba(255, 127, 159, 0.1);
+  border-color: rgba(255, 127, 159, 0.22);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
