@@ -158,6 +158,11 @@ The application
 
 Press **Q** to exit.
 
+Note:
+
+- When you deploy to Vercel, the same `app.py` file acts as the web entrypoint and serves the frontend.
+- When you run it locally with Python, it launches the webcam detector.
+
 ---
 
 ## 🌐 Frontend for Vercel
@@ -180,9 +185,9 @@ Important note:
 
 Deployment idea:
 
-1. Deploy `frontend/` as the Vercel root directory.
-2. Keep the Python training/inference scripts in this repo for local development.
-3. Connect the frontend to a backend endpoint later if you want live predictions from the trained model.
+1. Deploy the repo root to Vercel with `app.py` as the Python entrypoint.
+2. The web UI is served from `frontend/` by the root app.
+3. Keep the webcam and training scripts for local development only.
 
 ---
 

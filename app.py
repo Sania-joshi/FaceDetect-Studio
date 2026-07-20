@@ -1,153 +1,161 @@
-import cv2
-import numpy as np
-import tensorflow as tf
+from __future__ import annotations
 
-# ===========================
-# Load Trained Model
-# ===========================
+import mimetypes
+from pathlib import Path
+from urllib.parse import unquote
 
-model = tf.keras.models.load_model("models/best_emotion_model.keras")
-print("✅ Emotion model loaded successfully!")
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "frontend"
 
-# ===========================
-# Emotion Labels
-# ===========================
 
-emotion_labels = [
-    "Angry",
-    "Disgust",
-    "Fear",
-    "Happy",
-    "Sad",
-    "Surprise",
-    "Neutral"
-]
+def _response(start_response, status: str, body: bytes, content_type: str) -> list[bytes]:
+    headers = [
+        ("Content-Type", content_type),
+        ("Content-Length", str(len(body))),
+        ("Cache-Control", "no-store"),
+    ]
+    start_response(status, headers)
+    return [body]
 
-# ===========================
-# Load Face Detector
-# ===========================
 
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+def _serve_file(start_response, file_path: Path) -> list[bytes]:
+    if not file_path.exists() or not file_path.is_file():
+        return _response(start_response, "404 Not Found", b"Not Found", "text/plain; charset=utf-8")
 
-if face_cascade.empty():
-    print("❌ Error loading face detector.")
-    exit()
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    body = file_path.read_bytes()
+    return _response(start_response, "200 OK", body, content_type or "application/octet-stream")
 
-print("✅ Face detector loaded successfully!")
 
-# ===========================
-# Open Webcam
-# ===========================
+def app(environ, start_response):
+    """Minimal WSGI app for Vercel that serves the FaceDetect frontend."""
 
-cap = cv2.VideoCapture(0)
+    path = unquote(environ.get("PATH_INFO", "/"))
 
-if not cap.isOpened():
-    print("❌ Could not open webcam.")
-    exit()
+    if path in {"", "/"}:
+        return _serve_file(start_response, FRONTEND_DIR / "index.html")
 
-print("✅ Webcam started.")
+    if path == "/health":
+        return _response(
+            start_response,
+            "200 OK",
+            b'{"status":"ok","service":"FaceDetect Studio"}',
+            "application/json; charset=utf-8",
+        )
 
-# ===========================
-# Real-Time Detection Loop
-# ===========================
+    if path.startswith("/frontend/"):
+        relative_path = path.removeprefix("/frontend/")
+        return _serve_file(start_response, FRONTEND_DIR / relative_path)
 
-while True:
+    if path in {"/index.html", "/app.js", "/styles.css"}:
+        return _serve_file(start_response, FRONTEND_DIR / path.lstrip("/"))
 
-    ret, frame = cap.read()
+    return _response(start_response, "404 Not Found", b"Not Found", "text/plain; charset=utf-8")
 
-    if not ret:
-        break
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+def run_webcam() -> None:
+    import cv2
+    import numpy as np
+    import tensorflow as tf
 
-    faces = face_cascade.detectMultiScale(
-        gray,
-        scaleFactor=1.1,
-        minNeighbors=6,
-        minSize=(80, 80)
+    model = tf.keras.models.load_model("models/best_emotion_model.keras")
+    print("✅ Emotion model loaded successfully!")
+
+    emotion_labels = [
+        "Angry",
+        "Disgust",
+        "Fear",
+        "Happy",
+        "Sad",
+        "Surprise",
+        "Neutral",
+    ]
+
+    face_cascade = cv2.CascadeClassifier(
+        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
 
-    for (x, y, w, h) in faces:
+    if face_cascade.empty():
+        print("❌ Error loading face detector.")
+        return
 
-        # Ignore very small faces
-        if w < 80 or h < 80:
-            continue
+    print("✅ Face detector loaded successfully!")
 
-        # Crop face
-        face = gray[y:y+h, x:x+w]
+    cap = cv2.VideoCapture(0)
 
-        # Resize to model input
-        face = cv2.resize(face, (48, 48))
+    if not cap.isOpened():
+        print("❌ Could not open webcam.")
+        return
 
-        # Normalize
-        face = face.astype("float32") / 255.0
+    print("✅ Webcam started.")
 
-        face = np.expand_dims(face, axis=-1)
-        face = np.expand_dims(face, axis=0)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-        # Predict
-        prediction = model.predict(face, verbose=0)
-
-        confidence = float(np.max(prediction))
-        emotion_index = np.argmax(prediction)
-
-        # Confidence Threshold
-        if confidence >= 0.60:
-            emotion = emotion_labels[emotion_index]
-            color = (0, 255, 0)      # Green
-        else:
-            emotion = "Unknown"
-            color = (0, 0, 255)      # Red
-
-        text = f"{emotion} | {confidence*100:.1f}%"
-
-        # Draw Face Rectangle
-        cv2.rectangle(
-            frame,
-            (x, y),
-            (x+w, y+h),
-            color,
-            2
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=6,
+            minSize=(80, 80),
         )
 
-        # Text Background
-        (text_width, text_height), baseline = cv2.getTextSize(
-            text,
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            2
-        )
+        for (x, y, w, h) in faces:
+            if w < 80 or h < 80:
+                continue
 
-        cv2.rectangle(
-            frame,
-            (x, y-35),
-            (x + text_width + 10, y),
-            color,
-            -1
-        )
+            face = gray[y : y + h, x : x + w]
+            face = cv2.resize(face, (48, 48))
+            face = face.astype("float32") / 255.0
+            face = np.expand_dims(face, axis=-1)
+            face = np.expand_dims(face, axis=0)
 
-        # Draw Text
-        cv2.putText(
-            frame,
-            text,
-            (x+5, y-10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2
-        )
+            prediction = model.predict(face, verbose=0)
+            confidence = float(np.max(prediction))
+            emotion_index = int(np.argmax(prediction))
 
-    cv2.imshow("FaceDetect - Emotion Recognition", frame)
+            if confidence >= 0.60:
+                emotion = emotion_labels[emotion_index]
+                color = (0, 255, 0)
+            else:
+                emotion = "Unknown"
+                color = (0, 0, 255)
 
-    # Press Q to Quit
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+            text = f"{emotion} | {confidence * 100:.1f}%"
 
-# ===========================
-# Cleanup
-# ===========================
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+            (text_width, text_height), baseline = cv2.getTextSize(
+                text,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                2,
+            )
+            cv2.rectangle(
+                frame,
+                (x, y - 35),
+                (x + text_width + 10, y),
+                color,
+                -1,
+            )
+            cv2.putText(
+                frame,
+                text,
+                (x + 5, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
 
-cap.release()
-cv2.destroyAllWindows()
+        cv2.imshow("FaceDetect - Emotion Recognition", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    run_webcam()
